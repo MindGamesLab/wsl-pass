@@ -1,3 +1,16 @@
+# WSL2-pass
+
+Add WSL2 clipboard support to `pass` by calling Powershell Win32 process.
+During install, WSL environment is detected by looking for the existance of the `WSLENV` env.
+Make sure to preserve your current environment with the `-E` option of `sudo`, otherwise WSL2 custom clip function won't be provisioned.
+
+```
+sudo -E make install 
+```
+
+
+# pass
+
 ======================
 Simple Password Store
 by Jason Donenfeld
@@ -19,6 +32,7 @@ Depends on:
   http://www.gnupg.org/
 - git
   http://www.git-scm.com/
+- Powershell (for WSL2 environments)
 - xclip (for X11 environments)
   http://sourceforge.net/projects/xclip/
 - wl-clipboard (for wlroots Wayland-based environments)

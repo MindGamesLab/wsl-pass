@@ -5,6 +5,9 @@ LIBDIR ?= $(PREFIX)/lib
 MANDIR ?= $(PREFIX)/share/man
 
 PLATFORMFILE := src/platform/$(shell uname | cut -d _ -f 1 | tr '[:upper:]' '[:lower:]').sh
+ifeq ($(strip $(wildcard $(PLATFORMFILE))),)
+PLATFORMFILE := src/platform/noop.sh
+endif
 
 BASHCOMPDIR ?= $(PREFIX)/share/bash-completion/completions
 ZSHCOMPDIR ?= $(PREFIX)/share/zsh/site-functions
@@ -31,6 +34,12 @@ WITH_FISHCOMP := yes
 endif
 endif
 
+ifeq ($(strip $(WSLENV)),)
+WITH_WLS2_SUPPORT := no
+else
+WITH_WLS2_SUPPORT := yes
+endif
+
 all:
 	@echo "Password store is a shell script, so there is nothing to do. Try \"make install\" instead."
 
@@ -40,20 +49,13 @@ install-common:
 	@[ "$(WITH_ZSHCOMP)" = "yes" ] || exit 0; install -v -d "$(DESTDIR)$(ZSHCOMPDIR)" && install -m 0644 -v src/completion/pass.zsh-completion "$(DESTDIR)$(ZSHCOMPDIR)/_pass"
 	@[ "$(WITH_FISHCOMP)" = "yes" ] || exit 0; install -v -d "$(DESTDIR)$(FISHCOMPDIR)" && install -m 0644 -v src/completion/pass.fish-completion "$(DESTDIR)$(FISHCOMPDIR)/pass.fish"
 
-
-ifneq ($(strip $(wildcard $(PLATFORMFILE))),)
 install: install-common
 	@install -v -d "$(DESTDIR)$(LIBDIR)/password-store" && install -m 0644 -v "$(PLATFORMFILE)" "$(DESTDIR)$(LIBDIR)/password-store/platform.sh"
+	@[ "$(WITH_WLS2_SUPPORT)" = "yes" ] || exit 0; cat "src/platform/wsl2.sh" >>  "$(DESTDIR)$(LIBDIR)/password-store/platform.sh"
 	@install -v -d "$(DESTDIR)$(LIBDIR)/password-store/extensions"
 	@install -v -d "$(DESTDIR)$(BINDIR)/"
 	@trap 'rm -f src/.pass' EXIT; sed 's:.*PLATFORM_FUNCTION_FILE.*:source "$(LIBDIR)/password-store/platform.sh":;s:^SYSTEM_EXTENSION_DIR=.*:SYSTEM_EXTENSION_DIR="$(LIBDIR)/password-store/extensions":' src/password-store.sh > src/.pass && \
 	install -v -d "$(DESTDIR)$(BINDIR)/" && install -m 0755 -v src/.pass "$(DESTDIR)$(BINDIR)/pass"
-else
-install: install-common
-	@install -v -d "$(DESTDIR)$(LIBDIR)/password-store/extensions"
-	@trap 'rm -f src/.pass' EXIT; sed '/PLATFORM_FUNCTION_FILE/d;s:^SYSTEM_EXTENSION_DIR=.*:SYSTEM_EXTENSION_DIR="$(LIBDIR)/password-store/extensions":' src/password-store.sh > src/.pass && \
-	install -v -d "$(DESTDIR)$(BINDIR)/" && install -m 0755 -v src/.pass "$(DESTDIR)$(BINDIR)/pass"
-endif
 
 uninstall:
 	@rm -vrf \
